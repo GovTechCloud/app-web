@@ -3,9 +3,9 @@ name: Build and Deploy Vite App to Azure Static Web Apps with OIDC
 on:
   push:
     branches:
-      - main
-      - staging
-      - dev
+      # - main
+      # - staging
+      # - dev
   pull_request:
 
 permissions:
