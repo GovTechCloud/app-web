@@ -3,9 +3,9 @@ name: CI/CD - Vite to Azure Static Web Apps (OIDC)
 on:
   push:
     branches:
-      # - main
-      # - staging
-      # - dev
+      - main
+      - staging
+      - dev
   pull_request:
 
 env:
