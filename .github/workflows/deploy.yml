@@ -42,6 +42,8 @@ jobs:
           api_location: ${{ env.API_LOCATION }}
           app_artifact_location: ${{ env.APP_ARTIFACT_LOCATION }}
           ###### End of Repository/Build Configurations ######
+        env:
+          REACT_APP_API_URL: ${{ vars.REACT_APP_API_URL }}
 
   close_pull_request_job:
     permissions:
