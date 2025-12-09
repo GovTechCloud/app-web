@@ -1,0 +1,121 @@
+name: CI/CD - Vite to Azure Static Web Apps (OIDC)
+
+on:
+  push:
+    branches:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  APP_LOCATION: "/"
+  API_LOCATION: "api"
+  APP_ARTIFACT_LOCATION: "build"
+  AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Run Lint
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+      - name: Run lint
+        run: npm run lint
+    
+  test:
+    runs-on: ubuntu-latest
+    name: Run Tests
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test -- --ci --watchAll=false
+
+  sonarcloud:
+    name: Quality Scan
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        if: false
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+
+  build_and_deploy_job:
+    needs: sonarcloud
+    permissions:
+      contents: read
+      pull-requests: write
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: ${{ env.APP_LOCATION }}
+          api_location: ${{ env.API_LOCATION }}
+          app_artifact_location: ${{ env.APP_ARTIFACT_LOCATION }}
+        env:
+          REACT_APP_API_URL: ${{ vars.REACT_APP_API_URL }}
+    outputs:
+      app_url: ${{ steps.builddeploy.outputs.static_web_app_url }}
+
+
+  zap_scan:
+    name: Security Scan
+    needs: build_and_deploy_job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ needs.build_and_deploy_job.outputs.app_url }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+          artifact_name: 'zap_scan_report'
