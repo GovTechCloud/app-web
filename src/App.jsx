@@ -1,4 +1,3 @@
-import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -6,7 +5,6 @@ import Inventario from "./pages/Inventario";
 import Reportes from "./pages/Reportes";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminInventario from "./components/AdminInventario";
-import Footer from "./components/Footer";
 import "./App.css";
 
 function App() {
@@ -41,7 +39,6 @@ function App() {
         {/* --- Agregar mas componentes --- */}
         
       </Routes>
-      <Footer />
     </BrowserRouter>
   );
 }
